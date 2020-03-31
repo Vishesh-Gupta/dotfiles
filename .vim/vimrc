@@ -27,7 +27,7 @@ Plugin 'git://git.wincent.com/command-t.git'
 Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
 " Install L9 and avoid a Naming conflict if you've already installed a
 " different version somewhere else.
-" Plugin 'ascenator/L9', {'name': 'newL9'}
+Plugin 'ascenator/L9', {'name': 'newL9'}
 
 " The NERDTree vim script is for file system for the Vim editor
 Plugin 'scrooloose/nerdtree'
@@ -40,6 +40,21 @@ Plugin 'flazz/vim-colorschemes'
 
 " The vim autocomplete plugin
 Plugin 'valloric/youcompleteme'
+
+" The surround.vim plugin for surroundings
+Plugin 'tpope/vim-surround'
+
+" The vim wakatime plugin for automatic metric generation and tracking
+Plugin 'wakatime/vim-wakatime'
+
+" The vim airline plugin
+Plugin 'vim-airline/vim-airline'
+
+" The tagbar plugin
+Plugin 'majutsushi/tagbar'
+
+" Commenting plugin
+Plugin 'tpope/vim-commentary'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -56,9 +71,18 @@ filetype plugin indent on    " required
 " see :h vundle for more details or wiki for FAQ
 " Put your non-Plugin stuff after this line
 
+" PLUGIN AUTOLOADS
+
 " Changes the color scheme ot molokai
 colorscheme molokai
 
 " Adds the nerdtree file directory viewer to vim 
 autocmd vimenter * NERDTree
 
+" Adds a tagbar to vim
+nmap <F8>:TagbarToggle<CR>
+
+
+" UI SETTINGS
+set number
+set mouse=a
