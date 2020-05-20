@@ -3,7 +3,8 @@
 ## Contents
 1. Intro
 2. Vim
-3. VSCode
+3. Tmux
+3. VS Code
 4. Contributing
 5. FAQ!
 
@@ -13,6 +14,8 @@ Development environments are based on the comfort of the user. Through this
 repoitory, one can experience my development environments.
 
 ### Vim
+
+Vim is a popular text editor for a lot of developers. Vim is known to be very efficient once skilled at vim scripts, but it has a learning curve.
 
 Vim settings are available in `~/.vim/`. The package manager used for Vim is Vundle.
 
@@ -36,9 +39,19 @@ git clone https://github.com/Vishesh-gupta/dotfiles.git/vim ~/.vim | Vi +PluginI
 ```
 And congratulations you have a configuration setup.
 
+### Tmux
+Tmux stands for terminal multiplexer and has some really interesting features.
+
+Installation:
+
+```sh
+cd ~/
+wget https://github.com/Vishesh-gupta/dotfiles.git/tree/master/.tmux/.tmux.conf
+source .tmux.conf
+```
 
 ### VSCode
-VSCode - Visual Studio Code - a text editor by Microsoft. Became extremelly popular in last few years. 
+VSCode - Visual Studio Code - a text editor by Microsoft. Became extremely popular in last few years. 
 
 List of extensions recommended:
 1. Intellisense - Intelligent syntax highlight and management for each language
