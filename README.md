@@ -5,6 +5,7 @@
   - [Table of Contents](#table-of-contents)
   - [Intro](#intro)
   - [Vim](#vim)
+      - [Vundle](#vundle)
     - [Plugins used for vim:](#plugins-used-for-vim)
   - [Tmux](#tmux)
   - [VSCode](#vscode)
@@ -23,7 +24,13 @@ repoitory, one can experience my development environments.
 
 Vim is a popular text editor for a lot of developers. Vim is known to be very efficient once skilled at vim scripts, but it has a learning curve.
 
-Vim settings are available in `~/.vim/`. The package manager used for Vim is Vundle.
+#### Vundle
+
+Vim plugins are managed by Vundle - a package manager.
+
+```sh
+git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+```
 
 ### Plugins used for vim:
 1. Nerdtree - File System Display
@@ -41,7 +48,7 @@ Vim settings are available in `~/.vim/`. The package manager used for Vim is Vun
 
 Installation:
 ```sh
-cd ~/ | wget https://github.com/Vishesh-gupta/dotfiles/blob/master/.vim/.vimrc | Vi +PluginInstall +qall
+cd ~/.vim/ | wget https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/master/.vim/.vimrc | Vi +PluginInstall +qall
 ```
 And congratulations you have a configuration setup.
 
@@ -51,7 +58,7 @@ Tmux stands for terminal multiplexer and has some really interesting features.
 Installation:
 
 ```sh
-cd ~/ |wget https://github.com/Vishesh-Gupta/dotfiles/blob/master/.tmux/.tmux.conf | source .tmux.conf
+cd ~/ |wget https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/master/.tmux/.tmux.conf | source .tmux.conf
 ```
 
 ## VSCode
