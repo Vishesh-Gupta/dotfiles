@@ -1,0 +1,19 @@
+# Git aliases
+alias gc="git add . & git commit -m"
+alias gp="git pull"
+alias gu="git pull"
+alias gs="git status"
+
+alias apps="cd ~/apps/"
+
+# Python venv
+alias pyenv="python3 -m venv env"
+alias startenv="source env/bin/activate"
+alias pyget="pip3 install"
+
+# Directory aliases
+alias .="cd ./"
+alias ..="cd ../"
+alias ...="cd ../../"
+alias ls="ls -ACF"
+
