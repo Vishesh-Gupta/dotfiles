@@ -1,0 +1,11 @@
+username="Please use your username"
+
+function cd() {
+  if [ $# -eq 0 ]; then 
+    builtin cd '/home/${username}'
+  else
+    builtin cd '${1}'
+  fi
+
+  ls
+}
