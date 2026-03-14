@@ -1,88 +1,177 @@
-# .dotfiles
+# Dotfiles
 
-## Table of Contents
-- [.dotfiles](#dotfiles)
-  - [Table of Contents](#table-of-contents)
-  - [Intro](#intro)
-  - [Vim](#vim)
-      - [Vundle](#vundle)
-    - [Plugins used for vim:](#plugins-used-for-vim)
-  - [Tmux](#tmux)
-  - [VSCode](#vscode)
-    - [List of extensions recommended:](#list-of-extensions-recommended)
-      - [Common Extensions:](#common-extensions)
-      - [Local Extensions:](#local-extensions)
-      - [Remote WSL Extensions:](#remote-wsl-extensions)
-  - [Contribution](#contribution)
+[![Quality and Security Checks](https://github.com/Vishesh-Gupta/dotfiles/actions/workflows/quality-and-security.yml/badge.svg)](https://github.com/Vishesh-Gupta/dotfiles/actions/workflows/quality-and-security.yml)
 
-## Intro
-As a developer, everyone struggles in creating a nice development environment.
-Development environments are based on the comfort of the user. Through this 
-repoitory, one can experience my development environments.
+Professional, reproducible macOS dotfiles focused on a modular Zsh setup.
 
-## Vim
+## Scope
 
-Vim is a popular text editor for a lot of developers. Vim is known to be very efficient once skilled at vim scripts, but it has a learning curve.
+This repository intentionally tracks:
 
-#### Vundle
+- Zsh shell configuration (`.zshrc`, `.zshrc.d`, `.zprofile`, `.zshenv`)
+- Compatibility shell files (`.profile`, `.bashrc`)
+- Terminal tool config (`.config/ghostty`, `.config/zellij`)
+- Bootstrap automation (`scripts/install.sh`, `scripts/bootstrap.sh`)
 
-Vim plugins are managed by Vundle - a package manager.
+This repository intentionally does **not** track machine-specific editor state (for example Cursor user settings).
 
-```sh
-git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
-```
+## Repository Layout
 
-### Plugins used for vim:
-1. Nerdtree - File System Display
-2. Colorschemes - Better Color Schemes
-3. Surround.Vim - Managing surroundings easily
-4. YouCompleteMe - Auto syntax completions
-5. Fugitive.Vim - Adds amazing Git commands
-6. Vim-cpp-enhanced-highligts - Adds cpp highlighting
-7. Vim-wakatime - Analysis of time spent on file types
-8. Tagbar - Adds a tagbar to vim
-9. Ctrlp.vim
-10. Vimcompletesme
-11. Vim-man - Adds man pages access to vim
-12. Undotree - Descriptive undo history
+- `.zshrc`: minimal entrypoint that loads modular config
+- `.zshrc.d/`: split config by concern (`env`, `tools`, `aliases`, `functions`, `startup`)
+- `.zprofile`: login-shell initialization
+- `.zshenv`: environment required in all zsh contexts
+- `.config/ghostty/config.toml`: Ghostty settings
+- `.config/zellij/config.kdl`: Zellij settings (tmux alternative)
+- `scripts/install.sh`: idempotent local installer
+- `scripts/bootstrap.sh`: one-liner bootstrap entrypoint
 
-Installation:
-```sh
-cd ~/.vim/ | wget https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/master/.vim/.vimrc | Vi +PluginInstall +qall
-```
-And congratulations you have a configuration setup.
+## Prerequisites
 
-## Tmux
-Tmux stands for terminal multiplexer and has some really interesting features.
+- macOS (Darwin)
+- internet connectivity for package and plugin installation
 
-Installation:
+## Installation
+
+### Option 1: Local clone (recommended for maintenance)
 
 ```sh
-cd ~/ |wget https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/master/.tmux/.tmux.conf | source .tmux.conf
+git clone https://github.com/Vishesh-Gupta/dotfiles.git "$HOME/personal/dotfiles"
+cd "$HOME/personal/dotfiles"
+./scripts/install.sh
 ```
 
-## VSCode
-VSCode - Visual Studio Code - a text editor by Microsoft. Became extremely popular in last few years. 
+### Option 2: One-liner remote bootstrap (no gist, no manual clone)
 
-### List of extensions recommended:
+```sh
+curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/scripts/bootstrap.sh" | bash
+```
 
-#### Common Extensions: 
-1. Intellisense - Intelligent syntax highlight and management for each language
+By default, `bootstrap.sh` downloads this repository archive from GitHub and installs from that temporary copy.
 
-#### Local Extensions:
-1. Better Comments - Make commenting easier and cleaner
-2. Debugger for Chrome - Debug your Javascript in Chrome from VS Code
-3. Remote-WSL - Extension for windows users to connect to WSL
-4. VSCode-Icons - Icon pack for cleaner looking icons
-5. Remote-SSH - Ease in connecting to SSH server instances
-6. VimBinding - Add Vim bindings to VSCode
-7. MathSnippets - Adds math snippets such as
-8. SFTP- File syncing extension to remote
+Override repo/ref at runtime:
 
-#### Remote WSL Extensions:
-1. Docker - Makes it easy to connect and manage docker without code
-2. Markdown All in One - Clean markdown builder with syntax highlighting
+```sh
+DOTFILES_REPO="<owner>/<repo>" DOTFILES_REF="<branch-or-tag>" \
+  curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/scripts/bootstrap.sh" | bash
+```
 
-## Contribution
+Preview only (no changes):
 
-Feel free to contribute to this repository to make it a source for dotfiles for many developers
+```sh
+curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/scripts/bootstrap.sh" | bash -s -- --dry-run
+```
+
+## Installer Behavior
+
+`scripts/install.sh` is idempotent and safe to re-run:
+
+- installs Homebrew only when missing
+- installs missing formulas/casks only
+- clones missing Zsh framework/plugins only
+- updates links or files deterministically
+
+### Install modes
+
+```sh
+./scripts/install.sh --link
+```
+
+- default mode
+- symlinks files from the repo into `$HOME`
+- ideal when keeping the repo on disk
+
+```sh
+./scripts/install.sh --copy --self-destruct
+```
+
+- copies files into `$HOME` (no symlink dependency)
+- removes the cloned dotfiles repository after successful setup
+- useful for ephemeral bootstrap flows
+
+```sh
+./scripts/install.sh --dry-run --copy --self-destruct
+```
+
+- prints planned actions without making changes
+
+## Testing
+
+Run the script test suite:
+
+```sh
+./scripts/test.sh
+```
+
+The suite validates:
+
+- shell syntax for installer/bootstrap scripts
+- CLI option guards and help text
+- dry-run behavior for both `install.sh` and `bootstrap.sh`
+
+Run the security scan:
+
+```sh
+./scripts/security-scan.sh
+```
+
+The security scan includes:
+
+- `shellcheck` static analysis
+- advisory pattern scan for potentially risky shell primitives (for manual review)
+
+## Installed Dependencies
+
+Homebrew formulas:
+
+- `bat`
+- `eza`
+- `fzf`
+- `gh`
+- `git`
+- `glow`
+- `neofetch`
+- `ripgrep`
+- `zellij`
+- `zoxide`
+
+Homebrew casks:
+
+- `ghostty`
+
+Zsh ecosystem:
+
+- `oh-my-zsh`
+- `powerlevel10k`
+- `zsh-autosuggestions`
+- `zsh-syntax-highlighting`
+
+## Usage
+
+- open a new terminal, or run:
+
+```sh
+exec zsh
+```
+
+- launch multiplexer:
+
+```sh
+zellij
+```
+
+## Maintenance
+
+- rerun setup anytime after pulling updates:
+
+```sh
+cd "$HOME/personal/dotfiles"
+git pull
+./scripts/install.sh
+```
+
+## Security Notes
+
+- Review remote scripts before running `curl | bash`.
+- Keep secrets out of this repository.
+- Prefer machine-local files for host-specific settings.

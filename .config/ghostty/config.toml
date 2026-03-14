@@ -1,0 +1,26 @@
+# Ghostty configuration tuned for shell ergonomics.
+
+[terminal]
+theme = "One Dark"
+
+[keyboard.bindings]
+cmd-left = "send: \u001bb"
+cmd-right = "send: \u001bf"
+shift-left = "select-left"
+shift-right = "select-right"
+shift-up = "select-up"
+shift-down = "select-down"
+shift-cmd-left = "select-left-word"
+shift-cmd-right = "select-right-word"
+cmd-k = "send: \u000c"
+cmd-c = "send: \x03"
+cmd-d = "send: \x04"
+cmd-r = "send: \x12"
+cmd-u = "send: \x15"
+cmd-a = "send: \x01"
+cmd-e = "send: \x05"
+cmd-p = "send: \x10"
+cmd-n = "send: \x0e"
+cmd-l = "send: \x0c"
+cmd-shift-c = "copy"
+cmd-shift-v = "paste"
