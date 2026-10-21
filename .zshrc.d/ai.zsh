@@ -12,16 +12,14 @@ fi
 ai-doctor() {
   local -a tools=(claude codex gemini copilot opencode cursor-agent llm aider)
   local -a keys=(ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY GITHUB_TOKEN)
-  local tool key version missing=0
+  local tool key version
 
-  print -P "%BAI tools%b"
+  print -P "%BAI tools%b (change with: dotfiles install)"
   for tool in $tools; do
-    if (( $+commands[$tool] )); then
-      version="$($tool --version 2>/dev/null | head -n 1)"
+    if (( $+commands[$tool] )) && version="$($tool --version 2>/dev/null | head -n 1)"; then
       printf '  %-13s %s\n' "$tool" "${version:-installed}"
     else
-      printf '  %-13s %s\n' "$tool" "MISSING (run: mise install)"
-      missing=1
+      printf '  %-13s %s\n' "$tool" "-"
     fi
   done
 
@@ -33,6 +31,4 @@ ai-doctor() {
       printf '  %-18s not set\n' "$key"
     fi
   done
-
-  return $missing
 }

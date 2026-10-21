@@ -33,6 +33,7 @@ echo "Running dotfiles script tests..."
 bash -n "$REPO_ROOT/scripts/install.sh"
 bash -n "$REPO_ROOT/scripts/bootstrap.sh"
 bash -n "$REPO_ROOT/scripts/security-scan.sh"
+bash -n "$REPO_ROOT/bin/dotfiles"
 pass "script syntax checks"
 
 command -v zsh >/dev/null 2>&1 || fail "zsh is required to check zsh config syntax"
@@ -44,10 +45,53 @@ pass "zsh config syntax checks"
 git config --file "$REPO_ROOT/.config/git/config" --list >/dev/null || fail "invalid .config/git/config"
 pass "git config parses"
 
-for toml in .config/mise/config.toml .config/starship.toml; do
-  python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' "$REPO_ROOT/$toml" || fail "invalid TOML: $toml"
-done
+toml_keys() {
+  python3 -c 'import sys, tomllib; print(" ".join(tomllib.load(open(sys.argv[1], "rb")).get("tools", {})))' "$1"
+}
+
+toml_keys "$REPO_ROOT/.config/starship.toml" >/dev/null || fail "invalid TOML: .config/starship.toml"
 pass "TOML configs parse"
+
+# Print the mise config an install would generate for the given selection flags.
+generated_mise_config() {
+  local home out
+  home="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test-gen.XXXXXX")"
+  HOME="$home" DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --dry-run "$@" \
+    | sed -n 's/^\[dry-run\]   //p' > "$home/config.toml"
+  out="$(toml_keys "$home/config.toml")" || { rm -rf "$home"; fail "generated mise config is invalid TOML ($*)"; }
+  rm -rf "$home"
+  echo " $out "
+}
+
+list_out="$(DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --list)"
+assert_contains "$list_out" "claude" "catalog lists claude"
+pass "tool catalog lists"
+
+for flags in "--yes" "--all" "--tools gemini,aider,llm,python"; do
+  # shellcheck disable=SC2086  # flags are intentionally split
+  generated_mise_config $flags >/dev/null
+done
+pass "generated mise config is valid TOML for every selection"
+
+keys="$(generated_mise_config --tools claude,gemini)"
+assert_contains "$keys" " fzf " "core tools are always installed"
+assert_contains "$keys" " claude " "selected agent is installed"
+assert_contains "$keys" " node " "npm-based agent pulls in node"
+[[ "$keys" != *" codex "* ]] || fail "unselected agent should not be installed"
+[[ "$keys" == *" ripgrep "*" cursor-agent "* || "$keys" != *" cursor-agent "* ]] || fail "AI agents must come after core tools"
+pass "tool selection drives mise config"
+
+keys="$(generated_mise_config --all)"
+[[ "$keys" == *" ripgrep "*" cursor-agent "* ]] || fail "AI agents must come after core tools"
+pass "AI agents listed after core tools"
+
+set +e
+unknown_out="$(DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --dry-run --tools nope 2>&1)"
+unknown_status=$?
+set -e
+[[ $unknown_status -ne 0 ]] || fail "unknown tool id should fail"
+assert_contains "$unknown_out" "Unknown tool id: 'nope'" "unknown tool error text"
+pass "unknown tool id is rejected"
 
 install_help="$(DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --help)"
 assert_contains "$install_help" "--dry-run" "install help includes dry-run"
@@ -68,15 +112,45 @@ pass "invalid self-destruct guard"
 tmp_home="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test-home.XXXXXX")"
 trap 'rm -rf "$tmp_home"' EXIT
 
-dry_run_out="$(HOME="$tmp_home" DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --dry-run --copy --self-destruct)"
+dry_run_out="$(HOME="$tmp_home" DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --dry-run --yes --copy --self-destruct)"
 assert_contains "$dry_run_out" "Dry run complete. No changes were made." "install dry-run completion message"
 assert_not_exists "$tmp_home/.zshrc" "install dry-run should not create files"
 pass "install dry-run safety"
 
-bootstrap_dry_run_out="$(HOME="$tmp_home" bash "$REPO_ROOT/scripts/bootstrap.sh" --dry-run)"
-assert_contains "$bootstrap_dry_run_out" "[dry-run] curl -fsSL" "bootstrap dry-run should avoid network call"
-assert_contains "$bootstrap_dry_run_out" "--dry-run" "bootstrap dry-run should propagate dry-run to installer"
+bootstrap_dry_run_out="$(HOME="$tmp_home" bash "$REPO_ROOT/scripts/bootstrap.sh" --dry-run --all)"
+assert_contains "$bootstrap_dry_run_out" "$tmp_home/.dotfiles" "bootstrap defaults to ~/.dotfiles"
+assert_contains "$bootstrap_dry_run_out" "--dry-run --all" "bootstrap passes options to the installer"
+assert_not_exists "$tmp_home/.dotfiles" "bootstrap dry-run should not download"
 pass "bootstrap dry-run behavior"
+
+# Without git, bootstrap falls back to a tarball (curl or wget).
+nogit_bin="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test-bin.XXXXXX")"
+for tool in bash curl mktemp dirname cat rm; do
+  ln -s "$(command -v "$tool")" "$nogit_bin/$tool"
+done
+bootstrap_nogit_out="$(HOME="$tmp_home" PATH="$nogit_bin" bash "$REPO_ROOT/scripts/bootstrap.sh" --dry-run)"
+rm -rf "$nogit_bin"
+assert_contains "$bootstrap_nogit_out" "archive/main.tar.gz" "bootstrap downloads a tarball without git"
+pass "bootstrap tarball fallback"
+
+dotfiles_help="$(bash "$REPO_ROOT/bin/dotfiles" help)"
+assert_contains "$dotfiles_help" "upgrade" "dotfiles help lists commands"
+[[ "$(DOTFILES_DIR=/somewhere bash "$REPO_ROOT/bin/dotfiles" dir)" == "/somewhere" ]] || fail "dotfiles dir honours DOTFILES_DIR"
+pass "dotfiles command"
+
+# Drive the checkbox menu through a pseudo-terminal (util-linux `script` only).
+if script -qec true /dev/null >/dev/null 2>&1; then
+  menu_out="$(
+    { sleep 1; printf '\033[B'; sleep 0.3; printf ' '; sleep 0.3; printf '\r'; sleep 2; } \
+      | HOME="$tmp_home" TERM=xterm-256color DOTFILES_SKIP_OS_CHECK=1 \
+        script -qec "bash '$REPO_ROOT/scripts/install.sh' --dry-run" /dev/null 2>&1 | tr -d '\r'
+  )"
+  assert_contains "$menu_out" "Dotfiles setup: choose what to install" "menu renders"
+  [[ "$menu_out" == *"[tools] core, claude, gemini"* ]] || fail "menu toggle should untick codex"
+  pass "interactive menu toggles tools"
+else
+  echo "[skip] interactive menu test (needs util-linux script)"
+fi
 
 link_home="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test-link.XXXXXX")"
 trap 'rm -rf "$tmp_home" "$link_home"' EXIT
@@ -85,9 +159,11 @@ echo "old zshrc" > "$link_home/.zshrc"
 echo "local tweak" > "$link_home/.zshrc.d/local.zsh"
 
 HOME="$link_home" DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --link --no-packages >/dev/null
+[[ "$(readlink "$link_home/.local/bin/dotfiles")" == "$REPO_ROOT/bin/dotfiles" ]] || fail "dotfiles command should be linked"
+[[ "$(cat "$link_home/.config/dotfiles/repo")" == "$REPO_ROOT" ]] || fail "repo path should be recorded"
 [[ "$(readlink "$link_home/.zshrc")" == "$REPO_ROOT/.zshrc" ]] || fail ".zshrc should link to the repo"
 [[ "$(readlink "$link_home/.zshrc.d")" == "$REPO_ROOT/.zshrc.d" ]] || fail ".zshrc.d should link to the repo, not inside an existing dir"
-for cfg in .config/starship.toml .config/git/config .config/git/ignore .config/mise/config.toml \
+for cfg in .config/starship.toml .config/git/config .config/git/ignore \
            .config/ghostty/config .config/zellij/config.kdl \
            .claude/CLAUDE.md .codex/AGENTS.md .gemini/GEMINI.md .config/opencode/AGENTS.md; do
   [[ -L "$link_home/$cfg" ]] || fail "$cfg should be linked"

@@ -34,13 +34,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # macOS runs the installer with the system /bin/bash 3.2, like a fresh Mac.
           - name: macos
             runs-on: macos-latest
+            install: /bin/bash ./scripts/install.sh --yes
           - name: ubuntu
             runs-on: ubuntu-latest
+            install: bash ./scripts/install.sh --all
           - name: debian-root
             runs-on: ubuntu-latest
             container: debian:stable
+            install: bash ./scripts/install.sh --all
     runs-on: ${{ matrix.runs-on }}
     container: ${{ matrix.container }}
     env:
@@ -51,22 +55,32 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Install
-        run: bash ./scripts/install.sh --link
+        run: ${{ matrix.install }}
 
-      - name: Re-run install (idempotent)
-        run: bash ./scripts/install.sh --link
+      - name: Re-run with saved selection (idempotent)
+        run: bash ./scripts/install.sh --yes
 
       - name: Verify tools from a fresh shell
         shell: bash
         run: |
           cd "$HOME"
-          zsh -i -c 'ai-doctor'
-          missing="$("$HOME/.local/bin/mise" ls --missing)"
-          if [ -n "$missing" ]; then
-            echo "Missing tools:"
-            echo "$missing"
-            exit 1
-          fi
+          "$HOME/.local/bin/dotfiles" doctor
           # Non-interactive shells (what AI agents spawn) must see the tools too.
-          zsh -c 'for c in claude codex gemini rg fd fzf node python uv gh cargo; do command -v "$c" >/dev/null || { echo "not on PATH: $c"; exit 1; }; done'
+          zsh -c 'for c in claude gemini rg fd fzf node python uv gh cargo; do command -v "$c" >/dev/null || { echo "not on PATH: $c"; exit 1; }; done'
           bash -lc 'command -v claude && command -v rg'
+
+  # The documented one-liner, against this branch.
+  bootstrap:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      DOTFILES_REPO: ${{ github.repository }}
+      DOTFILES_REF: ${{ github.head_ref || github.ref_name }}
+    steps:
+      - name: Bootstrap with wget
+        run: wget -qO- "https://raw.githubusercontent.com/${DOTFILES_REPO}/${DOTFILES_REF}/scripts/bootstrap.sh" | bash -s -- --yes
+
+      - name: Verify
+        run: |
+          test -f "$HOME/.dotfiles/scripts/install.sh"
+          "$HOME/.local/bin/dotfiles" doctor
