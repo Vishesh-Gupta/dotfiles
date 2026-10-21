@@ -32,6 +32,7 @@ APT_PACKAGES=(
   ca-certificates
   curl
   git
+  python3          # node-gyp, for native npm modules
   unzip
   zsh
 )
@@ -674,6 +675,7 @@ sync_dotfiles() {
   sync_item "$REPO_ROOT/.zprofile" "$HOME/.zprofile"
   sync_item "$REPO_ROOT/.zshenv" "$HOME/.zshenv"
   sync_item "$REPO_ROOT/.profile" "$HOME/.profile"
+  sync_item "$REPO_ROOT/.bash_profile" "$HOME/.bash_profile"
   sync_item "$REPO_ROOT/.bashrc" "$HOME/.bashrc"
   sync_item "$REPO_ROOT/.zshrc.d" "$HOME/.zshrc.d"
   sync_item "$REPO_ROOT/bin/dotfiles" "$HOME/.local/bin/dotfiles"

@@ -163,6 +163,7 @@ HOME="$link_home" DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" 
 [[ "$(cat "$link_home/.config/dotfiles/repo")" == "$REPO_ROOT" ]] || fail "repo path should be recorded"
 [[ "$(readlink "$link_home/.zshrc")" == "$REPO_ROOT/.zshrc" ]] || fail ".zshrc should link to the repo"
 [[ "$(readlink "$link_home/.zshrc.d")" == "$REPO_ROOT/.zshrc.d" ]] || fail ".zshrc.d should link to the repo, not inside an existing dir"
+[[ "$(readlink "$link_home/.bash_profile")" == "$REPO_ROOT/.bash_profile" ]] || fail ".bash_profile should be linked"
 for cfg in .config/starship.toml .config/git/config .config/git/ignore \
            .config/ghostty/config .config/zellij/config.kdl \
            .claude/CLAUDE.md .codex/AGENTS.md .gemini/GEMINI.md .config/opencode/AGENTS.md; do
@@ -190,6 +191,15 @@ pass "copy install replaces existing links"
 startup_err="$(cd "$link_home" && HOME="$link_home" TERM=xterm-256color zsh -i -c exit 2>&1 >/dev/null)" || fail "zsh startup exited non-zero: $startup_err"
 [[ -z "$startup_err" ]] || fail "zsh startup printed errors: $startup_err"
 pass "zsh starts cleanly"
+
+# CI runners ship world-writable completion dirs; compinit must not prompt.
+insecure_dir="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test-fpath.XXXXXX")"
+chmod 777 "$insecure_dir"
+startup_err="$(cd "$link_home" && HOME="$link_home" TERM=xterm-256color FPATH="$insecure_dir:$(zsh -fc 'echo $FPATH')" \
+  zsh -i -c exit 2>&1 >/dev/null </dev/null)" || fail "zsh startup with insecure fpath exited non-zero: $startup_err"
+rm -rf "$insecure_dir"
+[[ -z "$startup_err" ]] || fail "zsh startup with insecure fpath printed errors: $startup_err"
+pass "zsh starts cleanly with insecure completion dirs"
 
 bash "$REPO_ROOT/scripts/security-scan.sh" >/dev/null
 pass "security scan script runs"
