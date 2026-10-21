@@ -63,6 +63,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zsh
 
+      # The suite ends with the security scan; macOS runners lack shellcheck.
+      - name: Install test tools
+        uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+        with:
+          mise_toml: |
+            [tools]
+            shellcheck = "latest"
+            ripgrep = "latest"
+
       # /bin first so macOS runs the scripts with its system bash 3.2, like a fresh Mac.
       - name: Run test suite
         run: env PATH="/bin:$PATH" bash ./scripts/test.sh
