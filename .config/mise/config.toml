@@ -1,0 +1,6 @@
+# Global mise settings. Pin per-project versions in that project's mise.toml.
+# Reference: https://mise.jdx.dev/configuration.html
+
+[settings]
+# Read .nvmrc, .python-version, etc. so existing projects just work.
+idiomatic_version_file_enable_tools = ["node", "python", "go"]

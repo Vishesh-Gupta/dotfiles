@@ -41,6 +41,9 @@ for zsh_file in "$REPO_ROOT"/.zshrc "$REPO_ROOT"/.zshenv "$REPO_ROOT"/.zprofile 
 done
 pass "zsh config syntax checks"
 
+git config --file "$REPO_ROOT/.config/git/config" --list >/dev/null || fail "invalid .config/git/config"
+pass "git config parses"
+
 install_help="$(DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --help)"
 assert_contains "$install_help" "--dry-run" "install help includes dry-run"
 pass "install help output"
@@ -79,7 +82,9 @@ echo "local tweak" > "$link_home/.zshrc.d/local.zsh"
 HOME="$link_home" DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --link --no-packages >/dev/null
 [[ "$(readlink "$link_home/.zshrc")" == "$REPO_ROOT/.zshrc" ]] || fail ".zshrc should link to the repo"
 [[ "$(readlink "$link_home/.zshrc.d")" == "$REPO_ROOT/.zshrc.d" ]] || fail ".zshrc.d should link to the repo, not inside an existing dir"
-[[ -L "$link_home/.config/starship.toml" ]] || fail "starship.toml should be linked"
+for cfg in starship.toml git/config git/ignore mise/config.toml ghostty/config zellij/config.kdl; do
+  [[ -L "$link_home/.config/$cfg" ]] || fail ".config/$cfg should be linked"
+done
 backups=("$link_home"/.dotfiles-backup/*)
 (( ${#backups[@]} == 1 )) || fail "expected one backup directory"
 [[ "$(<"${backups[0]}/.zshrc")" == "old zshrc" ]] || fail "existing .zshrc should be backed up"

@@ -1,7 +1,9 @@
 # Keep this file intentionally slim. Functional config lives in ~/.zshrc.d/*.zsh.
 
 source "$HOME/.zshrc.d/env.zsh"
+source "$HOME/.zshrc.d/fzf.zsh"
 source "$HOME/.zshrc.d/oh-my-zsh.zsh"
+source "$HOME/.zshrc.d/history.zsh"
 source "$HOME/.zshrc.d/prompt.zsh"
 source "$HOME/.zshrc.d/tools.zsh"
 source "$HOME/.zshrc.d/functions.zsh"
