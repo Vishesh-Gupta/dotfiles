@@ -8,6 +8,7 @@ source "$HOME/.zshrc.d/prompt.zsh"
 source "$HOME/.zshrc.d/tools.zsh"
 source "$HOME/.zshrc.d/functions.zsh"
 source "$HOME/.zshrc.d/aliases.zsh"
+source "$HOME/.zshrc.d/ai.zsh"
 
 # Machine-specific settings that should not live in the repo.
 if [[ -r "$HOME/.zshrc.local" ]]; then

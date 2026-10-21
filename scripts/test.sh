@@ -44,6 +44,11 @@ pass "zsh config syntax checks"
 git config --file "$REPO_ROOT/.config/git/config" --list >/dev/null || fail "invalid .config/git/config"
 pass "git config parses"
 
+for toml in .config/mise/config.toml .config/starship.toml; do
+  python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' "$REPO_ROOT/$toml" || fail "invalid TOML: $toml"
+done
+pass "TOML configs parse"
+
 install_help="$(DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --help)"
 assert_contains "$install_help" "--dry-run" "install help includes dry-run"
 pass "install help output"
@@ -82,9 +87,13 @@ echo "local tweak" > "$link_home/.zshrc.d/local.zsh"
 HOME="$link_home" DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" --link --no-packages >/dev/null
 [[ "$(readlink "$link_home/.zshrc")" == "$REPO_ROOT/.zshrc" ]] || fail ".zshrc should link to the repo"
 [[ "$(readlink "$link_home/.zshrc.d")" == "$REPO_ROOT/.zshrc.d" ]] || fail ".zshrc.d should link to the repo, not inside an existing dir"
-for cfg in starship.toml git/config git/ignore mise/config.toml ghostty/config zellij/config.kdl; do
-  [[ -L "$link_home/.config/$cfg" ]] || fail ".config/$cfg should be linked"
+for cfg in .config/starship.toml .config/git/config .config/git/ignore .config/mise/config.toml \
+           .config/ghostty/config .config/zellij/config.kdl \
+           .claude/CLAUDE.md .codex/AGENTS.md .gemini/GEMINI.md .config/opencode/AGENTS.md; do
+  [[ -L "$link_home/$cfg" ]] || fail "$cfg should be linked"
 done
+[[ "$(stat -c %a "$link_home/.config/ai/secrets.env" 2>/dev/null || stat -f %Lp "$link_home/.config/ai/secrets.env")" == "600" ]] \
+  || fail "secrets.env template should be created with mode 600"
 backups=("$link_home"/.dotfiles-backup/*)
 (( ${#backups[@]} == 1 )) || fail "expected one backup directory"
 [[ "$(<"${backups[0]}/.zshrc")" == "old zshrc" ]] || fail "existing .zshrc should be backed up"
@@ -102,7 +111,7 @@ HOME="$link_home" DOTFILES_SKIP_OS_CHECK=1 bash "$REPO_ROOT/scripts/install.sh" 
 [[ -d "$link_home/.zshrc.d" && ! -L "$link_home/.zshrc.d" ]] || fail ".zshrc.d should be a real dir after --copy"
 pass "copy install replaces existing links"
 
-startup_err="$(HOME="$link_home" TERM=xterm-256color zsh -i -c exit 2>&1 >/dev/null)" || fail "zsh startup exited non-zero: $startup_err"
+startup_err="$(cd "$link_home" && HOME="$link_home" TERM=xterm-256color zsh -i -c exit 2>&1 >/dev/null)" || fail "zsh startup exited non-zero: $startup_err"
 [[ -z "$startup_err" ]] || fail "zsh startup printed errors: $startup_err"
 pass "zsh starts cleanly"
 
