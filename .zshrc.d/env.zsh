@@ -5,6 +5,13 @@ if [[ -o interactive ]] && [[ "${TERM:-}" != "dumb" ]]; then
   _use_fancy_shell=1
 fi
 
+if (( $+commands[nvim] )); then
+  export EDITOR=nvim
+else
+  export EDITOR=vim
+fi
+export VISUAL="$EDITOR"
+
 : "${GOPATH:=$HOME/go}"
 export GOPATH
 
@@ -12,6 +19,7 @@ path=(
   /opt/homebrew/bin
   /opt/homebrew/sbin
   $HOME/.local/bin
+  $HOME/.cargo/bin
   $HOME/Library/Python/*/bin(N-/On)
   $HOME/.antigravity/antigravity/bin
   $path

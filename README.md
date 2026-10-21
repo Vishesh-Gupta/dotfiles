@@ -11,6 +11,7 @@ This repository intentionally tracks:
 - Zsh shell configuration (`.zshrc`, `.zshrc.d`, `.zprofile`, `.zshenv`)
 - Compatibility shell files (`.profile`, `.bashrc`)
 - Terminal tool config (`.config/ghostty`, `.config/zellij`, `.config/starship.toml`)
+- Git defaults and global ignore (`.config/git/`), mise settings (`.config/mise/`)
 - Homebrew packages (`Brewfile`)
 - Bootstrap automation (`scripts/install.sh`, `scripts/bootstrap.sh`)
 
@@ -19,13 +20,16 @@ This repository intentionally does **not** track machine-specific editor state (
 ## Repository Layout
 
 - `.zshrc`: minimal entrypoint that loads modular config
-- `.zshrc.d/`: split config by concern (`env`, `oh-my-zsh`, `prompt`, `tools`, `functions`, `aliases`)
+- `.zshrc.d/`: split config by concern (`env`, `fzf`, `oh-my-zsh`, `history`, `prompt`, `tools`, `functions`, `aliases`)
 - `~/.zshrc.local` (not tracked): optional machine-specific overrides, sourced last
 - `.zprofile`: login-shell initialization
 - `.zshenv`: environment required in all zsh contexts
 - `.config/ghostty/config`: Ghostty settings
 - `.config/zellij/config.kdl`: Zellij settings (tmux alternative)
 - `.config/starship.toml`: Starship prompt settings
+- `.config/git/config`: shared git defaults (delta pager, zdiff3, rebase on pull, ...)
+- `.config/git/ignore`: global gitignore
+- `.config/mise/config.toml`: global mise settings
 - `Brewfile`: Homebrew formulas and casks
 - `scripts/install.sh`: idempotent local installer
 - `scripts/bootstrap.sh`: one-liner bootstrap entrypoint
@@ -141,12 +145,26 @@ Homebrew packages are listed in [`Brewfile`](Brewfile). Install or refresh them 
 brew bundle --file Brewfile
 ```
 
+Rust is installed with the official [rustup](https://rustup.rs) installer (stable toolchain, `clippy`, `rustfmt`, `rust-analyzer`). It runs with `--no-modify-path`: `~/.zshenv` sources `~/.cargo/env` instead.
+
 Zsh ecosystem:
 
 - `oh-my-zsh`
+- `fzf-tab`
 - `zsh-autosuggestions`
 - `zsh-syntax-highlighting`
 - prompt: [`starship`](https://starship.rs) (from `Brewfile`)
+
+## What's Configured
+
+- **fzf**: uses `fd` (respects `.gitignore`, includes dotfiles). `Ctrl-T` finds files with a `bat` preview, `Alt-C` jumps to directories with an `eza` tree preview, and `Ctrl-R` searches history. `**<Tab>` triggers fuzzy path completion.
+- **fzf-tab**: every Tab completion opens in fzf; `cd <Tab>` previews directory contents. Use `<` and `>` to switch completion groups.
+- **eza**: `ls`, `la`, `ll` (git status, relative times), `lt` (tree, respects `.gitignore`).
+- **zoxide**: `cd` learns your directories; `cd foo` jumps to the best match.
+- **git + delta**: highlighted side-by-side-capable diffs with line numbers, `n`/`N` to jump between files, histogram diffs, `zdiff3` conflicts, `pull --rebase` with autostash, auto upstream on first push, pruning on fetch, rerere. Keep your name and email in `~/.gitconfig`.
+- **mise**: per-project language versions from `mise.toml`, `.nvmrc`, `.python-version`, `.go-version`. Example: `mise use node@lts`.
+- **uv**: Python tooling, for example `uv tool install ruff` instead of pipx.
+- **History**: 100k entries, shared across shells, timestamps, no duplicates, and commands starting with a space are not saved.
 
 ## Shell Helpers
 

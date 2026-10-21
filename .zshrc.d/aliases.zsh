@@ -55,7 +55,12 @@ if command -v gcloud >/dev/null 2>&1; then
 fi
 
 if command -v eza >/dev/null 2>&1; then
-  _define_alias ls 'eza --icons' 1
-  _define_alias la 'eza -a' 1
-  _define_alias ll 'eza -la --git --icons' 1
+  _define_alias ls 'eza --icons --group-directories-first' 1
+  _define_alias la 'eza -a --icons --group-directories-first' 1
+  _define_alias ll 'eza -la --git --icons --group-directories-first --time-style=relative' 1
+  _define_alias lt 'eza --tree --level=2 --icons --git-ignore' 1
+fi
+
+if command -v bat >/dev/null 2>&1; then
+  _define_alias bathelp 'bat --plain --language=help'
 fi

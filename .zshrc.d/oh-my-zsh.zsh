@@ -4,11 +4,14 @@ export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME=""
 
 # Directory jumping is handled by zoxide (see tools.zsh), so no `z` plugin.
+# fzf-tab must load before zsh-autosuggestions and zsh-syntax-highlighting.
 if (( _use_fancy_shell )); then
   plugins=(
     git
     fzf
+    rust
     colored-man-pages
+    fzf-tab
     zsh-autosuggestions
     zsh-syntax-highlighting
     history-substring-search

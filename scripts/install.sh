@@ -99,6 +99,22 @@ install_brewfile() {
   run_cmd brew bundle --no-upgrade --file "$REPO_ROOT/Brewfile"
 }
 
+# Rust toolchain via the official rustup installer. PATH is managed by the
+# dotfiles (~/.zshenv sources ~/.cargo/env), so rustup must not edit rc files.
+install_rust() {
+  if command -v rustup >/dev/null 2>&1 || [[ -x "$HOME/.cargo/bin/rustup" ]]; then
+    echo "[skip] rustup already installed"
+    return 0
+  fi
+
+  echo "[install] rustup (stable toolchain + rust-analyzer)"
+  if (( DRY_RUN )); then
+    echo "[dry-run] curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile default --component rust-analyzer"
+    return 0
+  fi
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile default --component rust-analyzer
+}
+
 clone_if_missing() {
   local repo="$1"
   local target="$2"
@@ -177,8 +193,10 @@ sync_item() {
 if (( INSTALL_PACKAGES )); then
   ensure_homebrew
   install_brewfile
+  install_rust
 
   clone_if_missing "https://github.com/ohmyzsh/ohmyzsh.git" "$HOME/.oh-my-zsh"
+  clone_if_missing "https://github.com/Aloxaf/fzf-tab.git" "$HOME/.oh-my-zsh/custom/plugins/fzf-tab"
   clone_if_missing "https://github.com/zsh-users/zsh-autosuggestions.git" "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
   clone_if_missing "https://github.com/zsh-users/zsh-syntax-highlighting.git" "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
 fi
@@ -193,6 +211,9 @@ sync_item "$REPO_ROOT/.zshrc.d" "$HOME/.zshrc.d"
 sync_item "$REPO_ROOT/.config/ghostty/config" "$HOME/.config/ghostty/config"
 sync_item "$REPO_ROOT/.config/zellij/config.kdl" "$HOME/.config/zellij/config.kdl"
 sync_item "$REPO_ROOT/.config/starship.toml" "$HOME/.config/starship.toml"
+sync_item "$REPO_ROOT/.config/git/config" "$HOME/.config/git/config"
+sync_item "$REPO_ROOT/.config/git/ignore" "$HOME/.config/git/ignore"
+sync_item "$REPO_ROOT/.config/mise/config.toml" "$HOME/.config/mise/config.toml"
 
 if (( SELF_DESTRUCT )); then
   case "$REPO_ROOT" in
