@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 echo "[security] running shellcheck"
-shellcheck -x scripts/install.sh scripts/bootstrap.sh scripts/test.sh scripts/security-scan.sh
+shellcheck -x scripts/install.sh scripts/bootstrap.sh scripts/test.sh scripts/security-scan.sh bin/dotfiles
 
 echo "[security] scanning for risky shell patterns"
 rg -n --hidden --glob "!.git" --glob "*.sh" --glob ".zshrc" --glob "*.zsh" --glob ".zprofile" --glob ".zshenv" --glob ".bashrc" --glob ".profile" \

@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+#
+# Manage this machine's setup, Homebrew-style:
+#   dotfiles install   pick tools from the menu and install them
+#   dotfiles update    pull the latest dotfiles and re-apply your selection
+#   dotfiles upgrade   upgrade installed tools and AI agents
+#   dotfiles doctor    check that everything selected is installed
+
+set -euo pipefail
+
+STATE_DIR="$HOME/.config/dotfiles"
+REPO="${DOTFILES_DIR:-}"
+if [[ -z "$REPO" ]] && [[ -r "$STATE_DIR/repo" ]]; then
+  REPO="$(cat "$STATE_DIR/repo")"
+fi
+REPO="${REPO:-$HOME/.dotfiles}"
+
+MISE="$HOME/.local/bin/mise"
+command -v mise >/dev/null 2>&1 && MISE="$(command -v mise)"
+
+usage() {
+  cat <<'USAGE'
+Usage: dotfiles <command> [options]
+
+Commands:
+  install [opts]   Show the tool menu and install (options as scripts/install.sh, e.g. --all)
+  update [opts]    Pull the latest dotfiles, then re-apply your saved selection
+  upgrade          Upgrade tools and AI agents (mise upgrade, rustup update)
+  doctor           Check that every selected tool is installed
+  list             Show the tool catalog
+  dir              Print the dotfiles checkout path
+USAGE
+}
+
+require_repo() {
+  if [[ ! -f "$REPO/scripts/install.sh" ]]; then
+    echo "dotfiles checkout not found at $REPO. Re-run the bootstrap one-liner."
+    exit 1
+  fi
+}
+
+cmd="${1:-help}"
+(( $# > 0 )) && shift
+
+case "$cmd" in
+  install|setup)
+    require_repo
+    exec bash "$REPO/scripts/install.sh" "$@"
+    ;;
+  update)
+    require_repo
+    if [[ -d "$REPO/.git" ]]; then
+      git -C "$REPO" pull --ff-only
+      exec bash "$REPO/scripts/install.sh" --yes "$@"
+    else
+      # Installed from a tarball: download a fresh copy, which re-runs the installer.
+      DOTFILES_DIR="$REPO" exec bash "$REPO/scripts/bootstrap.sh" --yes "$@"
+    fi
+    ;;
+  upgrade)
+    (cd "$HOME" && "$MISE" upgrade --yes)
+    if command -v rustup >/dev/null 2>&1; then
+      rustup update
+    fi
+    ;;
+  doctor)
+    status=0
+    echo "dotfiles: $REPO"
+    if [[ -r "$STATE_DIR/selected-tools" ]]; then
+      echo "selected: $(tr '\n' ' ' < "$STATE_DIR/selected-tools")"
+    fi
+    if [[ ! -x "$MISE" ]]; then
+      echo "mise: MISSING (run: dotfiles install)"
+      exit 1
+    fi
+    missing="$(cd "$HOME"; "$MISE" ls --missing 2>/dev/null)" || missing=""
+    if [[ -n "$missing" ]]; then
+      echo "missing tools (run: dotfiles install --yes):"
+      echo "$missing"
+      status=1
+    else
+      echo "mise: all selected tools installed"
+    fi
+    zsh -i -c 'ai-doctor' 2>/dev/null || true
+    exit "$status"
+    ;;
+  list)
+    require_repo
+    exec bash "$REPO/scripts/install.sh" --list
+    ;;
+  dir)
+    echo "$REPO"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $cmd"
+    usage
+    exit 1
+    ;;
+esac
