@@ -1,0 +1,8 @@
+# Deliberate exceptions for (j)actionlint.
+paths:
+  .github/workflows/ci.yml:
+    ignore:
+      # The job exists to test current Debian, so it follows the moving tag.
+      - 'container image "debian:stable" is pinned by a tag'
+      # This job tests the documented `wget | bash` one-liner from this repo.
+      - 'is run by "bash" without being verified'

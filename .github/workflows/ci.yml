@@ -1,40 +1,80 @@
-name: Quality and Security Checks
+name: CI
 
 on:
   pull_request:
   push:
     branches:
       - main
+  # Tools install as "latest", so re-check weekly that upstream releases
+  # haven't broken the setup.
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  verify-scripts:
+  lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - name: Install scan dependencies
+      - name: Install lint tools
+        uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+        with:
+          mise_toml: |
+            [tools]
+            jactionlint = "latest"
+            shellcheck = "latest"
+            ripgrep = "latest"
+
+      - name: Lint workflows
+        run: jactionlint
+
+      - name: Security scan (shellcheck + risky patterns)
+        run: bash ./scripts/security-scan.sh
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install zsh
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck ripgrep zsh
+          sudo apt-get install -y zsh
 
+      # /bin first so macOS runs the scripts with its system bash 3.2, like a fresh Mac.
       - name: Run test suite
-        run: bash ./scripts/test.sh
-
-      - name: Run security scan
-        run: bash ./scripts/security-scan.sh
+        run: env PATH="/bin:$PATH" bash ./scripts/test.sh
 
   # Full install on every supported platform: the same tools must land everywhere.
   full-install:
     name: full-install (${{ matrix.name }})
+    needs: [lint, test]
     strategy:
       fail-fast: false
       matrix:
         include:
-          # macOS runs the installer with the system /bin/bash 3.2, like a fresh Mac.
           - name: macos
             runs-on: macos-latest
             install: /bin/bash ./scripts/install.sh --yes
@@ -47,12 +87,15 @@ jobs:
             install: bash ./scripts/install.sh --all
     runs-on: ${{ matrix.runs-on }}
     container: ${{ matrix.container }}
+    timeout-minutes: 30
     env:
       # Avoids GitHub API rate limits when mise resolves "latest" versions.
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install
         run: ${{ matrix.install }}
@@ -60,24 +103,30 @@ jobs:
       - name: Re-run with saved selection (idempotent)
         run: bash ./scripts/install.sh --yes
 
-      - name: Verify tools from a fresh shell
+      - name: Verify tools from fresh shells
         shell: bash
         run: |
           cd "$HOME"
           "$HOME/.local/bin/dotfiles" doctor
           # Non-interactive shells (what AI agents spawn) must see the tools too.
-          zsh -c 'for c in claude gemini rg fd fzf node python uv gh cargo; do command -v "$c" >/dev/null || { echo "not on PATH: $c"; exit 1; }; done'
-          bash -lc 'command -v claude && command -v rg'
+          # shellcheck disable=SC2016  # the inner script must expand in the target shell
+          for shell in "zsh -c" "bash -lc"; do
+            $shell 'for c in claude gemini rg fd fzf node python uv gh cargo; do command -v "$c" >/dev/null || { echo "not on PATH: $c"; exit 1; }; done' \
+              || { echo "missing tools in: $shell"; exit 1; }
+          done
 
   # The documented one-liner, against this branch.
   bootstrap:
+    needs: [lint, test]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      DOTFILES_REPO: ${{ github.repository }}
+      DOTFILES_REPO: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
       DOTFILES_REF: ${{ github.head_ref || github.ref_name }}
     steps:
       - name: Bootstrap with wget
+        shell: bash
         run: wget -qO- "https://raw.githubusercontent.com/${DOTFILES_REPO}/${DOTFILES_REF}/scripts/bootstrap.sh" | bash -s -- --yes
 
       - name: Verify
