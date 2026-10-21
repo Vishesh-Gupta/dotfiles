@@ -2,46 +2,30 @@
 
 [![Quality and Security Checks](https://github.com/Vishesh-Gupta/dotfiles/actions/workflows/quality-and-security.yml/badge.svg)](https://github.com/Vishesh-Gupta/dotfiles/actions/workflows/quality-and-security.yml)
 
-Professional, reproducible macOS dotfiles focused on a modular Zsh setup.
+One AI-ready developer setup for **macOS and Debian/Ubuntu**: the same shell, the same tools, the same AI agents on every machine, including servers and containers where you run as root.
 
-## Scope
+## How it works
 
-This repository intentionally tracks:
+| Layer | macOS | Debian / Ubuntu |
+| --- | --- | --- |
+| System packages | Homebrew (`Brewfile`: GUI apps only) | apt (`zsh`, `git`, `curl`, `build-essential`, ...) |
+| CLI tools, runtimes, AI agents | **mise** (`.config/mise/config.toml`) | **mise** (same file) |
+| Rust | rustup (official installer) | rustup (official installer) |
+| Shell | zsh + Oh My Zsh + Starship | zsh + Oh My Zsh + Starship (set as login shell) |
 
-- Zsh shell configuration (`.zshrc`, `.zshrc.d`, `.zprofile`, `.zshenv`)
-- Compatibility shell files (`.profile`, `.bashrc`)
-- Terminal tool config (`.config/ghostty`, `.config/zellij`, `.config/starship.toml`)
-- Git defaults and global ignore (`.config/git/`), mise settings (`.config/mise/`)
-- Homebrew packages (`Brewfile`)
-- Bootstrap automation (`scripts/install.sh`, `scripts/bootstrap.sh`)
-
-This repository intentionally does **not** track machine-specific editor state (for example Cursor user settings).
-
-## Repository Layout
-
-- `.zshrc`: minimal entrypoint that loads modular config
-- `.zshrc.d/`: split config by concern (`env`, `fzf`, `oh-my-zsh`, `history`, `prompt`, `tools`, `functions`, `aliases`)
-- `~/.zshrc.local` (not tracked): optional machine-specific overrides, sourced last
-- `.zprofile`: login-shell initialization
-- `.zshenv`: environment required in all zsh contexts
-- `.config/ghostty/config`: Ghostty settings
-- `.config/zellij/config.kdl`: Zellij settings (tmux alternative)
-- `.config/starship.toml`: Starship prompt settings
-- `.config/git/config`: shared git defaults (delta pager, zdiff3, rebase on pull, ...)
-- `.config/git/ignore`: global gitignore
-- `.config/mise/config.toml`: global mise settings
-- `Brewfile`: Homebrew formulas and casks
-- `scripts/install.sh`: idempotent local installer
-- `scripts/bootstrap.sh`: one-liner bootstrap entrypoint
-
-## Prerequisites
-
-- macOS (Darwin)
-- internet connectivity for package and plugin installation
+Everything that can be cross-platform comes from **one tool list** in [`.config/mise/config.toml`](.config/mise/config.toml). mise installs prebuilt binaries into `~/.local/share/mise` without sudo, so it works the same for a laptop user and for root in a container.
 
 ## Installation
 
-### Option 1: Local clone (recommended for maintenance)
+### One-liner (no clone)
+
+```sh
+curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/scripts/bootstrap.sh" | bash
+```
+
+Downloads this repo, installs in copy mode, then deletes the download. Preview with `| bash -s -- --dry-run`. Override the source with `DOTFILES_REPO=<owner>/<repo>` and `DOTFILES_REF=<branch-or-tag>`.
+
+### Local clone (recommended if you edit the dotfiles)
 
 ```sh
 git clone https://github.com/Vishesh-Gupta/dotfiles.git "$HOME/personal/dotfiles"
@@ -49,156 +33,103 @@ cd "$HOME/personal/dotfiles"
 ./scripts/install.sh
 ```
 
-### Option 2: One-liner remote bootstrap (no gist, no manual clone)
+Then open a new terminal and sign in to the AI tools you use (`claude`, `codex`, `gemini`, `copilot`, ...). Run `ai-doctor` to see what's installed.
 
-```sh
-curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/scripts/bootstrap.sh" | bash
-```
+### Installer options
 
-By default, `bootstrap.sh` downloads this repository archive from GitHub and installs from that temporary copy.
+| Flag | Effect |
+| --- | --- |
+| `--link` (default) | Symlink files from the repo into `$HOME` |
+| `--copy` | Copy files instead (needed for `--self-destruct`) |
+| `--self-destruct` | Delete the repo after installing |
+| `--no-packages` | Only sync dotfiles; skip apt/Homebrew, mise tools and Zsh plugins |
+| `--dry-run` | Print what would happen |
 
-Override repo/ref at runtime:
+The installer is idempotent. Existing dotfiles that differ from the repo are moved to `~/.dotfiles-backup/<timestamp>/` first.
 
-```sh
-DOTFILES_REPO="<owner>/<repo>" DOTFILES_REF="<branch-or-tag>" \
-  curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/scripts/bootstrap.sh" | bash
-```
+Set `GITHUB_TOKEN` before installing on shared CI runners or networks, to avoid GitHub API rate limits when mise resolves versions.
 
-Preview only (no changes):
+## AI tools
 
-```sh
-curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/scripts/bootstrap.sh" | bash -s -- --dry-run
-```
+Installed on every machine through mise:
 
-## Installer Behavior
+| Command | Tool |
+| --- | --- |
+| `claude` | Claude Code |
+| `codex` | OpenAI Codex CLI |
+| `gemini` | Google Gemini CLI |
+| `copilot` | GitHub Copilot CLI |
+| `opencode` | opencode |
+| `cursor-agent` | Cursor CLI agent |
+| `llm` | Simon Willison's `llm` (prompts, embeddings, plugins from the shell) |
+| `aider` | aider |
 
-`scripts/install.sh` is idempotent and safe to re-run:
+Add or remove agents by editing the `[tools]` table in `.config/mise/config.toml`, then run `mise install`. Update everything with `mise upgrade`.
 
-- installs Homebrew only when missing
-- installs missing `Brewfile` packages only (`brew bundle --no-upgrade`)
-- clones missing Zsh framework/plugins only
-- backs up existing dotfiles that differ from the repo to `~/.dotfiles-backup/<timestamp>/` before replacing them
-- updates links or files deterministically
+**Shared instructions.** [`.config/ai/AGENTS.md`](.config/ai/AGENTS.md) is linked to `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` and `~/.config/opencode/AGENTS.md`, so every agent follows the same global rules. Edit it once.
 
-### Install modes
+**API keys.** Put keys in `~/.config/ai/secrets.env`. The installer creates it as an empty `chmod 600` template, and it is never tracked. zsh and bash load it automatically. Most agents also support browser sign-in, so keys are optional.
 
-```sh
-./scripts/install.sh --link
-```
+**Agents see your tools.** AI agents and editors run commands in non-interactive shells that skip `.zshrc`. `~/.zshenv`, `~/.profile` and `~/.bashrc` put mise's shims on `PATH`, so agents get the same `rg`, `node`, `python` and so on as your terminal.
 
-- default mode
-- symlinks files from the repo into `$HOME`
-- ideal when keeping the repo on disk
+## Developer tools
 
-```sh
-./scripts/install.sh --copy --self-destruct
-```
+Also from mise, on both platforms:
 
-- copies files into `$HOME` (no symlink dependency)
-- removes the cloned dotfiles repository after successful setup
-- useful for ephemeral bootstrap flows
+- **Shell:** `bat`, `eza`, `fd`, `fzf`, `ripgrep`, `zoxide`, `starship`
+- **Git:** `gh`, `delta`, `lazygit`
+- **Languages:** `node` (LTS), `python`, `go`, `uv`, plus Rust via rustup (`clippy`, `rustfmt`, `rust-analyzer`)
+- **Utilities:** `jq`, `yq`, `btop`, `glow`, `hyperfine`, `tealdeer` (`tldr`), `zellij`, `shellcheck`
 
-```sh
-./scripts/install.sh --no-packages
-```
+macOS only (Homebrew `Brewfile`): Ghostty.
 
-- skips Homebrew and plugin installs; only syncs dotfiles
+## What's configured
 
-```sh
-./scripts/install.sh --dry-run --copy --self-destruct
-```
+- **fzf:** uses `fd` (respects `.gitignore`, includes dotfiles). `Ctrl-T` finds files with a `bat` preview, `Alt-C` jumps to a directory with an `eza` tree preview, `Ctrl-R` searches history, and `**<Tab>` gives fuzzy path completion.
+- **fzf-tab:** every Tab completion opens in fzf; `cd <Tab>` previews directory contents.
+- **eza:** `ls`, `la`, `ll` (git status, relative times), `lt` (tree, respects `.gitignore`).
+- **zoxide:** `cd` learns your directories; `cd foo` jumps to the best match.
+- **git + delta:** highlighted diffs with line numbers, histogram diffs, `zdiff3` conflicts, `pull --rebase` with autostash, auto upstream on first push, pruning on fetch. Keep your name and email in `~/.gitconfig`.
+- **mise:** per-project versions from `mise.toml`, `.nvmrc`, `.python-version`, `.go-version`.
+- **History:** 100k entries shared across shells, with timestamps and no duplicates. Commands starting with a space are not saved.
+- **Zellij:** copies to the system clipboard over OSC 52, so it works over SSH and on both platforms.
 
-- prints planned actions without making changes
+## Repository layout
 
-## Testing
+- `.zshrc`: entrypoint that loads `.zshrc.d/*.zsh` in order (`env`, `fzf`, `oh-my-zsh`, `history`, `prompt`, `tools`, `functions`, `aliases`, `ai`), then `~/.zshrc.local` if present
+- `.zshenv`, `.zprofile`, `.profile`, `.bashrc`: `PATH` for every shell, including non-interactive ones
+- `.config/mise/config.toml`: the cross-platform tool list
+- `.config/ai/AGENTS.md`: global instructions shared by all AI agents
+- `.config/git/`: git defaults and global ignore
+- `.config/ghostty/config`, `.config/zellij/config.kdl`, `.config/starship.toml`: terminal, multiplexer and prompt
+- `Brewfile`: macOS-only apps
+- `scripts/install.sh`, `scripts/bootstrap.sh`: installer and one-liner entrypoint
 
-Run the script test suite:
+## Shell helpers
 
-```sh
-./scripts/test.sh
-```
-
-The suite validates:
-
-- shell syntax for installer/bootstrap scripts and zsh config files
-- CLI option guards and help text
-- dry-run behavior for both `install.sh` and `bootstrap.sh`
-- a real link-mode install into a temporary `$HOME` (backups, idempotency)
-- an interactive zsh startup with no errors
-
-Run the security scan:
-
-```sh
-./scripts/security-scan.sh
-```
-
-The security scan includes:
-
-- `shellcheck` static analysis
-- advisory pattern scan for potentially risky shell primitives (for manual review)
-
-## Installed Dependencies
-
-Homebrew packages are listed in [`Brewfile`](Brewfile). Install or refresh them on their own with:
-
-```sh
-brew bundle --file Brewfile
-```
-
-Rust is installed with the official [rustup](https://rustup.rs) installer (stable toolchain, `clippy`, `rustfmt`, `rust-analyzer`). It runs with `--no-modify-path`: `~/.zshenv` sources `~/.cargo/env` instead.
-
-Zsh ecosystem:
-
-- `oh-my-zsh`
-- `fzf-tab`
-- `zsh-autosuggestions`
-- `zsh-syntax-highlighting`
-- prompt: [`starship`](https://starship.rs) (from `Brewfile`)
-
-## What's Configured
-
-- **fzf**: uses `fd` (respects `.gitignore`, includes dotfiles). `Ctrl-T` finds files with a `bat` preview, `Alt-C` jumps to directories with an `eza` tree preview, and `Ctrl-R` searches history. `**<Tab>` triggers fuzzy path completion.
-- **fzf-tab**: every Tab completion opens in fzf; `cd <Tab>` previews directory contents. Use `<` and `>` to switch completion groups.
-- **eza**: `ls`, `la`, `ll` (git status, relative times), `lt` (tree, respects `.gitignore`).
-- **zoxide**: `cd` learns your directories; `cd foo` jumps to the best match.
-- **git + delta**: highlighted side-by-side-capable diffs with line numbers, `n`/`N` to jump between files, histogram diffs, `zdiff3` conflicts, `pull --rebase` with autostash, auto upstream on first push, pruning on fetch, rerere. Keep your name and email in `~/.gitconfig`.
-- **mise**: per-project language versions from `mise.toml`, `.nvmrc`, `.python-version`, `.go-version`. Example: `mise use node@lts`.
-- **uv**: Python tooling, for example `uv tool install ruff` instead of pipx.
-- **History**: 100k entries, shared across shells, timestamps, no duplicates, and commands starting with a space are not saved.
-
-## Shell Helpers
-
+- `ai-doctor`: lists installed AI tools and which API keys are set
 - `view <file>`: syntax-highlighted file viewer (`bat`), renders Markdown with `glow`
 - `git-cleanup` / `gcleanup`: deletes local branches whose upstream was deleted, after confirmation
 - `tfinit`: `terraform init` plus a multi-platform provider lock
-- `bench-shell [runs]`: measures interactive zsh startup time
+- `bench-shell [runs]`: measures interactive zsh startup time with `hyperfine`
 
-## Usage
-
-- open a new terminal, or run:
+## Testing
 
 ```sh
-exec zsh
+./scripts/test.sh          # syntax, config parsing, real installs into a temp $HOME, clean zsh startup
+./scripts/security-scan.sh # shellcheck + advisory scan for risky shell patterns
 ```
 
-- launch multiplexer:
-
-```sh
-zellij
-```
+CI also runs the full installer on macOS, Ubuntu (as a sudo user) and a Debian container (as root), then checks that every tool is reachable from interactive and non-interactive shells.
 
 ## Maintenance
 
-- rerun setup anytime after pulling updates:
-
 ```sh
-cd "$HOME/personal/dotfiles"
-git pull
-./scripts/install.sh
+cd "$HOME/personal/dotfiles" && git pull && ./scripts/install.sh   # re-sync everything
+mise upgrade                                                          # update tools and AI agents
 ```
 
-## Security Notes
+## Security notes
 
 - Review remote scripts before running `curl | bash`.
-- Keep secrets out of this repository.
-- Prefer machine-local files for host-specific settings.
+- Keep secrets in `~/.config/ai/secrets.env` or `~/.zshrc.local`, never in this repo.

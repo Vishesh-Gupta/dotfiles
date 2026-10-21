@@ -77,35 +77,13 @@ git-cleanup() {
   git branch -D -- "${branches[@]}"
 }
 
-# Benchmark shell startup in a pseudo-tty.
+# Benchmark interactive shell startup.
 bench-shell() {
-  local runs="${1:-5}"
+  local runs="${1:-10}"
   if ! [[ "$runs" == <-> ]] || (( runs < 1 )); then
     echo "Usage: bench-shell [positive-runs]"
     return 1
   fi
 
-  python3 - "$runs" <<'PY'
-import statistics
-import subprocess
-import sys
-import time
-
-runs = int(sys.argv[1])
-vals = []
-for _ in range(runs):
-    start = time.perf_counter()
-    proc = subprocess.run(
-        ["script", "-q", "/dev/null", "zsh", "-i", "-c", "exit"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    if proc.returncode != 0:
-        print(f"Benchmark run failed with exit code {proc.returncode}.")
-        sys.exit(proc.returncode)
-    vals.append(time.perf_counter() - start)
-
-print(f"runs: {vals}")
-print(f"avg: {statistics.mean(vals):.3f}s  min: {min(vals):.3f}s  max: {max(vals):.3f}s")
-PY
+  hyperfine --warmup 2 --runs "$runs" 'zsh -i -c exit'
 }

@@ -26,3 +26,47 @@ jobs:
 
       - name: Run security scan
         run: bash ./scripts/security-scan.sh
+
+  # Full install on every supported platform: the same tools must land everywhere.
+  full-install:
+    name: full-install (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos
+            runs-on: macos-latest
+          - name: ubuntu
+            runs-on: ubuntu-latest
+          - name: debian-root
+            runs-on: ubuntu-latest
+            container: debian:stable
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
+    env:
+      # Avoids GitHub API rate limits when mise resolves "latest" versions.
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install
+        run: bash ./scripts/install.sh --link
+
+      - name: Re-run install (idempotent)
+        run: bash ./scripts/install.sh --link
+
+      - name: Verify tools from a fresh shell
+        shell: bash
+        run: |
+          cd "$HOME"
+          zsh -i -c 'ai-doctor'
+          missing="$("$HOME/.local/bin/mise" ls --missing)"
+          if [ -n "$missing" ]; then
+            echo "Missing tools:"
+            echo "$missing"
+            exit 1
+          fi
+          # Non-interactive shells (what AI agents spawn) must see the tools too.
+          zsh -c 'for c in claude codex gemini rg fd fzf node python uv gh cargo; do command -v "$c" >/dev/null || { echo "not on PATH: $c"; exit 1; }; done'
+          bash -lc 'command -v claude && command -v rg'
