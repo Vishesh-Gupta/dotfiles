@@ -5,15 +5,28 @@ if [[ -o interactive ]] && [[ "${TERM:-}" != "dumb" ]]; then
   _use_fancy_shell=1
 fi
 
-export PATH="/opt/homebrew/bin:$PATH"
-export PATH="$HOME/Library/Python/3.13/bin:$PATH"
+if (( $+commands[nvim] )); then
+  export EDITOR=nvim
+else
+  export EDITOR=vim
+fi
+export VISUAL="$EDITOR"
 
 : "${GOPATH:=$HOME/go}"
 export GOPATH
-export PATH="$PATH:$GOPATH/bin"
 
-# Added by Antigravity
-export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
+path=(
+  /opt/homebrew/bin
+  /opt/homebrew/sbin
+  $HOME/.local/bin
+  $HOME/.cargo/bin
+  $HOME/Library/Python/*/bin(N-/On)
+  $HOME/.antigravity/antigravity/bin
+  $path
+  $GOPATH/bin
+)
 
-# De-duplicate PATH entries while preserving first occurrences.
+# Drop directories that don't exist on this machine and de-duplicate,
+# keeping the first occurrence.
+path=($^path(N-/))
 typeset -U path PATH

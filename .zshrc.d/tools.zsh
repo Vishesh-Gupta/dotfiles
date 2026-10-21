@@ -1,12 +1,13 @@
 # Tool integrations and lazy completion.
 
-if (( _use_fancy_shell )) && [[ -f "$HOME/.fzf.zsh" ]]; then
-  source "$HOME/.fzf.zsh"
-fi
-
 if command -v zoxide >/dev/null 2>&1; then
   # Override cd with zoxide's smarter jump behavior.
   eval "$(zoxide init zsh --cmd cd)"
+fi
+
+if command -v mise >/dev/null 2>&1; then
+  # Puts the tool versions from mise.toml / .tool-versions on PATH per directory.
+  eval "$(mise activate zsh)"
 fi
 
 if command -v entire >/dev/null 2>&1; then
