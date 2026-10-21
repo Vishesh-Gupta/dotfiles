@@ -1,1 +1,1 @@
-*.*rc linguist-language=RC linguist-detectable=true
+.zshrc.d/*.zsh linguist-language=Shell

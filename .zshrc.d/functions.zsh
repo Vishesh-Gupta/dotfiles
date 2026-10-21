@@ -44,7 +44,7 @@ tfinit() {
   terraform providers lock -platform=linux_amd64 -platform=darwin_arm64 -platform=darwin_amd64
 }
 
-# Remove local branches whose remote was deleted.
+# Delete local branches whose upstream was deleted (asks before deleting).
 git-cleanup() {
   if ! git rev-parse --is-inside-work-tree &>/dev/null; then
     echo "Not in a git repository"
@@ -52,42 +52,29 @@ git-cleanup() {
   fi
 
   echo "Fetching and pruning remote branches..."
-  git fetch --prune origin 2>/dev/null
+  git fetch --prune || return 1
 
-  local branches
-  branches=$(git branch -vv | rg ': gone\]' | awk '{print $1}' | rg -v '^\*')
+  local current
+  current=$(git branch --show-current)
 
-  if [[ -z "$branches" ]]; then
-    echo "No merged branches to clean up"
+  local -a branches
+  branches=(${(f)"$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads | awk '$2 == "[gone]" { print $1 }')"})
+  branches=(${branches:#$current})
+
+  if (( ! $#branches )); then
+    echo "No branches with a deleted upstream"
     return 0
   fi
 
-  local count
-  count=$(echo "$branches" | wc -l | tr -d ' ')
-  echo "Found $count merged branch(es) to delete:"
-  echo "$branches" | sed 's/^/  /'
-  echo ""
-
-  echo "$branches" | xargs git branch -D
-  echo "Cleanup complete!"
-}
-
-# Auto-run branch cleanup once per day (only in git repos).
-_daily_git_cleanup() {
-  local marker_file="$HOME/.git-cleanup-last-run"
-  local today
-  today=$(date +%Y-%m-%d)
-
-  if [[ -f "$marker_file" ]] && [[ "$(<"$marker_file")" == "$today" ]]; then
+  echo "Branches whose upstream is gone:"
+  print -l -- "${(@)branches/#/  }"
+  if ! read -q "?Delete ${#branches} branch(es)? [y/N] "; then
+    echo
     return 0
   fi
+  echo
 
-  if git rev-parse --is-inside-work-tree &>/dev/null; then
-    echo "Running daily git branch cleanup..."
-    git-cleanup
-    echo "$today" > "$marker_file"
-    echo ""
-  fi
+  git branch -D -- "${branches[@]}"
 }
 
 # Benchmark shell startup in a pseudo-tty.

@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_MODE="link"
 SELF_DESTRUCT=0
 DRY_RUN=0
+INSTALL_PACKAGES=1
+BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%d-%H%M%S)"
 
 if [[ "${DOTFILES_SKIP_OS_CHECK:-0}" != "1" ]] && [[ "$(uname -s)" != "Darwin" ]]; then
   echo "This bootstrap script currently supports macOS only."
@@ -14,12 +16,13 @@ fi
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/install.sh [--link|--copy] [--self-destruct] [--dry-run]
+Usage: ./scripts/install.sh [--link|--copy] [--self-destruct] [--no-packages] [--dry-run]
 
 Options:
   --link            Symlink files from repo into $HOME (default)
   --copy            Copy files into $HOME (needed for self-destruct mode)
   --self-destruct   Delete the cloned repo after successful install
+  --no-packages     Skip Homebrew and Zsh plugin installs; only sync dotfiles
   --dry-run         Print actions without making changes
   -h, --help        Show help
 EOF
@@ -43,6 +46,9 @@ while (( $# > 0 )); do
       ;;
     --self-destruct)
       SELF_DESTRUCT=1
+      ;;
+    --no-packages)
+      INSTALL_PACKAGES=0
       ;;
     --dry-run)
       DRY_RUN=1
@@ -88,36 +94,9 @@ ensure_homebrew() {
   fi
 }
 
-install_formula_if_missing() {
-  local formula="$1"
-
-  if (( DRY_RUN )); then
-    echo "[dry-run] ensure formula installed: $formula"
-    return 0
-  fi
-
-  if brew list --formula "$formula" >/dev/null 2>&1; then
-    echo "[skip] formula already installed: $formula"
-  else
-    echo "[install] formula: $formula"
-    run_cmd brew install "$formula"
-  fi
-}
-
-install_cask_if_missing() {
-  local cask="$1"
-
-  if (( DRY_RUN )); then
-    echo "[dry-run] ensure cask installed: $cask"
-    return 0
-  fi
-
-  if brew list --cask "$cask" >/dev/null 2>&1; then
-    echo "[skip] cask already installed: $cask"
-  else
-    echo "[install] cask: $cask"
-    run_cmd brew install --cask "$cask"
-  fi
+install_brewfile() {
+  echo "[brew] bundle $REPO_ROOT/Brewfile"
+  run_cmd brew bundle --no-upgrade --file "$REPO_ROOT/Brewfile"
 }
 
 clone_if_missing() {
@@ -131,10 +110,35 @@ clone_if_missing() {
   fi
 }
 
+# Move an existing file out of the way unless it already matches the repo.
+backup_existing() {
+  local src="$1"
+  local dst="$2"
+
+  if [[ ! -e "$dst" && ! -L "$dst" ]]; then
+    return 0
+  fi
+  if [[ -L "$dst" ]] && [[ "$(readlink "$dst")" == "$src" ]]; then
+    return 0
+  fi
+  if [[ ! -L "$dst" ]] && diff -rq "$src" "$dst" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local backup="$BACKUP_DIR/${dst#"$HOME"/}"
+  run_cmd mkdir -p "$(dirname "$backup")"
+  run_cmd mv "$dst" "$backup"
+  echo "[backup] $dst -> $backup"
+}
+
 link_file() {
   local src="$1"
   local dst="$2"
   run_cmd mkdir -p "$(dirname "$dst")"
+  # ln -sfn would create the link inside an existing real directory.
+  if [[ -d "$dst" && ! -L "$dst" ]]; then
+    run_cmd rm -rf "$dst"
+  fi
   run_cmd ln -sfn "$src" "$dst"
   echo "[link] $dst -> $src"
 }
@@ -143,6 +147,11 @@ copy_item() {
   local src="$1"
   local dst="$2"
   run_cmd mkdir -p "$(dirname "$dst")"
+
+  # A symlink left by --link mode would make cp copy the file onto itself.
+  if [[ -L "$dst" ]]; then
+    run_cmd rm -f "$dst"
+  fi
 
   if [[ -d "$src" ]]; then
     run_cmd rm -rf "$dst"
@@ -157,6 +166,7 @@ copy_item() {
 sync_item() {
   local src="$1"
   local dst="$2"
+  backup_existing "$src" "$dst"
   if [[ "$INSTALL_MODE" == "copy" ]]; then
     copy_item "$src" "$dst"
   else
@@ -164,37 +174,14 @@ sync_item() {
   fi
 }
 
-ensure_homebrew
+if (( INSTALL_PACKAGES )); then
+  ensure_homebrew
+  install_brewfile
 
-formulas=(
-  bat
-  eza
-  fzf
-  gh
-  git
-  glow
-  neofetch
-  ripgrep
-  zellij
-  zoxide
-)
-
-for formula in "${formulas[@]}"; do
-  install_formula_if_missing "$formula"
-done
-
-casks=(
-  ghostty
-)
-
-for cask in "${casks[@]}"; do
-  install_cask_if_missing "$cask"
-done
-
-clone_if_missing "https://github.com/ohmyzsh/ohmyzsh.git" "$HOME/.oh-my-zsh"
-clone_if_missing "https://github.com/romkatv/powerlevel10k.git" "$HOME/powerlevel10k"
-clone_if_missing "https://github.com/zsh-users/zsh-autosuggestions.git" "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
-clone_if_missing "https://github.com/zsh-users/zsh-syntax-highlighting.git" "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+  clone_if_missing "https://github.com/ohmyzsh/ohmyzsh.git" "$HOME/.oh-my-zsh"
+  clone_if_missing "https://github.com/zsh-users/zsh-autosuggestions.git" "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+  clone_if_missing "https://github.com/zsh-users/zsh-syntax-highlighting.git" "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+fi
 
 sync_item "$REPO_ROOT/.zshrc" "$HOME/.zshrc"
 sync_item "$REPO_ROOT/.zprofile" "$HOME/.zprofile"
@@ -203,8 +190,9 @@ sync_item "$REPO_ROOT/.profile" "$HOME/.profile"
 sync_item "$REPO_ROOT/.bashrc" "$HOME/.bashrc"
 sync_item "$REPO_ROOT/.zshrc.d" "$HOME/.zshrc.d"
 
-sync_item "$REPO_ROOT/.config/ghostty/config.toml" "$HOME/.config/ghostty/config.toml"
+sync_item "$REPO_ROOT/.config/ghostty/config" "$HOME/.config/ghostty/config"
 sync_item "$REPO_ROOT/.config/zellij/config.kdl" "$HOME/.config/zellij/config.kdl"
+sync_item "$REPO_ROOT/.config/starship.toml" "$HOME/.config/starship.toml"
 
 if (( SELF_DESTRUCT )); then
   case "$REPO_ROOT" in

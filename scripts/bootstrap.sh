@@ -73,11 +73,14 @@ trap cleanup EXIT
 echo "[bootstrap] downloading archive: $ARCHIVE_URL"
 run_cmd curl -fsSL "$ARCHIVE_URL" -o "$ARCHIVE_PATH"
 
+# GitHub names the archive's top-level directory inconsistently (slashes in
+# branch names, leading "v" on tags), so strip it instead of guessing.
+EXTRACTED_DIR="${TMP_DIR}/dotfiles"
 echo "[bootstrap] extracting archive"
-run_cmd tar -xzf "$ARCHIVE_PATH" -C "$TMP_DIR"
+run_cmd mkdir -p "$EXTRACTED_DIR"
+run_cmd tar -xzf "$ARCHIVE_PATH" -C "$EXTRACTED_DIR" --strip-components=1
 
-EXTRACTED_DIR="${TMP_DIR}/$(basename "${OWNER_REPO}")-${REF}"
-if (( ! DRY_RUN )) && [[ ! -d "$EXTRACTED_DIR" ]]; then
+if (( ! DRY_RUN )) && [[ ! -f "$EXTRACTED_DIR/scripts/install.sh" ]]; then
   echo "Unable to locate extracted dotfiles directory."
   exit 1
 fi

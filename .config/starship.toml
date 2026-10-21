@@ -1,0 +1,19 @@
+# Starship prompt. Reference: https://starship.rs/config/
+"$schema" = "https://starship.rs/config-schema.json"
+
+add_newline = true
+command_timeout = 1000
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+
+[directory]
+truncation_length = 4
+truncate_to_repo = true
+
+[cmd_duration]
+min_time = 2000
+
+[gcloud]
+disabled = true
