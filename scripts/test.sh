@@ -192,12 +192,20 @@ startup_err="$(cd "$link_home" && HOME="$link_home" TERM=xterm-256color zsh -i -
 [[ -z "$startup_err" ]] || fail "zsh startup printed errors: $startup_err"
 pass "zsh starts cleanly"
 
-# CI runners ship world-writable completion dirs; compinit must not prompt.
+# CI runners ship world-writable completion dirs, and Ubuntu's /etc/zsh/zshrc
+# runs its own compinit unless ~/.zshenv sets skip_global_compinit. Mimic that
+# system file via ZDOTDIR; no compinit may prompt.
 insecure_dir="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test-fpath.XXXXXX")"
 chmod 777 "$insecure_dir"
-startup_err="$(cd "$link_home" && HOME="$link_home" TERM=xterm-256color FPATH="$insecure_dir:$(zsh -fc 'echo $FPATH')" \
+zdotdir="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test-zdotdir.XXXXXX")"
+printf 'source %q/.zshenv\n' "$link_home" > "$zdotdir/.zshenv"
+# shellcheck disable=SC2016  # written for zsh to expand
+printf '%s\n' 'if [[ -z "$skip_global_compinit" ]]; then autoload -U compinit; compinit; fi' \
+  "source $(printf '%q' "$link_home")/.zshrc" > "$zdotdir/.zshrc"
+startup_err="$(cd "$link_home" && HOME="$link_home" ZDOTDIR="$zdotdir" TERM=xterm-256color \
+  FPATH="$insecure_dir:$(zsh -fc 'echo $FPATH')" \
   zsh -i -c exit 2>&1 >/dev/null </dev/null)" || fail "zsh startup with insecure fpath exited non-zero: $startup_err"
-rm -rf "$insecure_dir"
+rm -rf "$insecure_dir" "$zdotdir"
 [[ -z "$startup_err" ]] || fail "zsh startup with insecure fpath printed errors: $startup_err"
 pass "zsh starts cleanly with insecure completion dirs"
 
