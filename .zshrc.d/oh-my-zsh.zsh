@@ -29,5 +29,6 @@ fpath=("$HOME/.docker/completions" $fpath)
 if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
   source "$ZSH/oh-my-zsh.sh"
 else
-  autoload -Uz compinit && compinit
+  # -i: skip insecure (group/world-writable) completion dirs instead of prompting.
+  autoload -Uz compinit && compinit -i
 fi

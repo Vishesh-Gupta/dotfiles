@@ -1,6 +1,6 @@
 # Dotfiles
 
-[![Quality and Security Checks](https://github.com/Vishesh-Gupta/dotfiles/actions/workflows/quality-and-security.yml/badge.svg)](https://github.com/Vishesh-Gupta/dotfiles/actions/workflows/quality-and-security.yml)
+[![CI](https://github.com/Vishesh-Gupta/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/Vishesh-Gupta/dotfiles/actions/workflows/ci.yml)
 
 One command to set up a new machine, **macOS or Debian/Ubuntu**. Pick your tools from a menu and get the same shell, CLI tools and AI agents everywhere, including servers and containers where you run as root.
 
@@ -102,7 +102,7 @@ After setup, manage the machine like Homebrew:
 - `tools.conf`: tool catalog
 - `bin/dotfiles`: the `dotfiles` command
 - `.zshrc`, `.zshrc.d/*.zsh`: zsh config split by concern
-- `.zshenv`, `.zprofile`, `.profile`, `.bashrc`: `PATH` for every shell
+- `.zshenv`, `.zprofile`, `.profile`, `.bash_profile`, `.bashrc`: `PATH` for every shell
 - `.config/`: git, Starship, Ghostty, Zellij and shared AI agent instructions
 
 ## Testing
@@ -112,7 +112,18 @@ After setup, manage the machine like Homebrew:
 ./scripts/security-scan.sh # shellcheck + advisory scan for risky shell patterns
 ```
 
-CI runs the full installer on macOS (system bash 3.2), Ubuntu and a root Debian container, plus the `wget | bash` one-liner, and checks every tool from interactive and non-interactive shells.
+## CI and updates
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every pull request, on pushes to `main`, weekly (Monday) and on demand:
+
+| Job | Checks |
+| --- | --- |
+| `lint` | jactionlint for workflows, shellcheck and the risky-pattern scan |
+| `test` | `scripts/test.sh` on Ubuntu and on macOS with the system bash 3.2 |
+| `full-install` | the real installer on macOS, Ubuntu (`--all`) and a root Debian container, run twice, then every tool checked from zsh and login bash |
+| `bootstrap` | the documented `wget \| bash` one-liner against the branch |
+
+Actions are pinned to commit SHAs. [Dependabot](.github/dependabot.yml) proposes updates weekly, grouped into one PR, after a 7-day cooldown. CLI tools and AI agents track `latest` through mise instead, so the weekly CI run is what catches an upstream release that breaks the setup.
 
 ## Security notes
 

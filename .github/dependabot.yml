@@ -1,0 +1,21 @@
+# Dependabot keeps the pinned GitHub Actions current. CLI tools and AI agents
+# install as "latest" through mise (tools.conf), so they update with
+# `dotfiles upgrade`, and the weekly CI run catches upstream breakage.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Wait a week after a release before proposing it (supply-chain safety).
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies
