@@ -209,7 +209,8 @@ rm -rf "$insecure_dir" "$zdotdir"
 [[ -z "$startup_err" ]] || fail "zsh startup with insecure fpath printed errors: $startup_err"
 pass "zsh starts cleanly with insecure completion dirs"
 
-bash "$REPO_ROOT/scripts/security-scan.sh" >/dev/null
+scan_out="$(bash "$REPO_ROOT/scripts/security-scan.sh" 2>&1)" || fail "security scan failed:
+$scan_out"
 pass "security scan script runs"
 
 echo "All tests passed (${PASS_COUNT} checks)."

@@ -102,7 +102,10 @@ detect_platform() {
     Linux)
       local id="" id_like=""
       if [[ -r /etc/os-release ]]; then
+        # Absent on macOS, where shellcheck -x would fail to follow it.
+        # shellcheck source=/dev/null
         id="$(. /etc/os-release && echo "${ID:-}")"
+        # shellcheck source=/dev/null
         id_like="$(. /etc/os-release && echo "${ID_LIKE:-}")"
       fi
       if [[ " $id $id_like " == *" debian "* ]]; then
