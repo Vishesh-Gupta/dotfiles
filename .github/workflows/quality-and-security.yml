@@ -6,17 +6,20 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   verify-scripts:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install scan dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck ripgrep
+          sudo apt-get install -y shellcheck ripgrep zsh
 
       - name: Run test suite
         run: bash ./scripts/test.sh

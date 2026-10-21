@@ -1,6 +1,5 @@
-# Prompt setup.
+# Prompt setup. Config lives in ~/.config/starship.toml.
 
-if (( _use_fancy_shell )); then
-  source "$HOME/powerlevel10k/powerlevel10k.zsh-theme"
-  [[ -f "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
+if (( _use_fancy_shell )) && (( $+commands[starship] )); then
+  eval "$(starship init zsh)"
 fi

@@ -10,7 +10,8 @@ This repository intentionally tracks:
 
 - Zsh shell configuration (`.zshrc`, `.zshrc.d`, `.zprofile`, `.zshenv`)
 - Compatibility shell files (`.profile`, `.bashrc`)
-- Terminal tool config (`.config/ghostty`, `.config/zellij`)
+- Terminal tool config (`.config/ghostty`, `.config/zellij`, `.config/starship.toml`)
+- Homebrew packages (`Brewfile`)
 - Bootstrap automation (`scripts/install.sh`, `scripts/bootstrap.sh`)
 
 This repository intentionally does **not** track machine-specific editor state (for example Cursor user settings).
@@ -18,11 +19,14 @@ This repository intentionally does **not** track machine-specific editor state (
 ## Repository Layout
 
 - `.zshrc`: minimal entrypoint that loads modular config
-- `.zshrc.d/`: split config by concern (`env`, `tools`, `aliases`, `functions`, `startup`)
+- `.zshrc.d/`: split config by concern (`env`, `oh-my-zsh`, `prompt`, `tools`, `functions`, `aliases`)
+- `~/.zshrc.local` (not tracked): optional machine-specific overrides, sourced last
 - `.zprofile`: login-shell initialization
 - `.zshenv`: environment required in all zsh contexts
-- `.config/ghostty/config.toml`: Ghostty settings
+- `.config/ghostty/config`: Ghostty settings
 - `.config/zellij/config.kdl`: Zellij settings (tmux alternative)
+- `.config/starship.toml`: Starship prompt settings
+- `Brewfile`: Homebrew formulas and casks
 - `scripts/install.sh`: idempotent local installer
 - `scripts/bootstrap.sh`: one-liner bootstrap entrypoint
 
@@ -67,8 +71,9 @@ curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/script
 `scripts/install.sh` is idempotent and safe to re-run:
 
 - installs Homebrew only when missing
-- installs missing formulas/casks only
+- installs missing `Brewfile` packages only (`brew bundle --no-upgrade`)
 - clones missing Zsh framework/plugins only
+- backs up existing dotfiles that differ from the repo to `~/.dotfiles-backup/<timestamp>/` before replacing them
 - updates links or files deterministically
 
 ### Install modes
@@ -90,6 +95,12 @@ curl -fsSL "https://raw.githubusercontent.com/Vishesh-Gupta/dotfiles/main/script
 - useful for ephemeral bootstrap flows
 
 ```sh
+./scripts/install.sh --no-packages
+```
+
+- skips Homebrew and plugin installs; only syncs dotfiles
+
+```sh
 ./scripts/install.sh --dry-run --copy --self-destruct
 ```
 
@@ -105,9 +116,11 @@ Run the script test suite:
 
 The suite validates:
 
-- shell syntax for installer/bootstrap scripts
+- shell syntax for installer/bootstrap scripts and zsh config files
 - CLI option guards and help text
 - dry-run behavior for both `install.sh` and `bootstrap.sh`
+- a real link-mode install into a temporary `$HOME` (backups, idempotency)
+- an interactive zsh startup with no errors
 
 Run the security scan:
 
@@ -122,29 +135,25 @@ The security scan includes:
 
 ## Installed Dependencies
 
-Homebrew formulas:
+Homebrew packages are listed in [`Brewfile`](Brewfile). Install or refresh them on their own with:
 
-- `bat`
-- `eza`
-- `fzf`
-- `gh`
-- `git`
-- `glow`
-- `neofetch`
-- `ripgrep`
-- `zellij`
-- `zoxide`
-
-Homebrew casks:
-
-- `ghostty`
+```sh
+brew bundle --file Brewfile
+```
 
 Zsh ecosystem:
 
 - `oh-my-zsh`
-- `powerlevel10k`
 - `zsh-autosuggestions`
 - `zsh-syntax-highlighting`
+- prompt: [`starship`](https://starship.rs) (from `Brewfile`)
+
+## Shell Helpers
+
+- `view <file>`: syntax-highlighted file viewer (`bat`), renders Markdown with `glow`
+- `git-cleanup` / `gcleanup`: deletes local branches whose upstream was deleted, after confirmation
+- `tfinit`: `terraform init` plus a multi-platform provider lock
+- `bench-shell [runs]`: measures interactive zsh startup time
 
 ## Usage
 

@@ -1,15 +1,7 @@
-// Zellij default config focused on tmux-like ergonomics.
+// Zellij configuration. Reference: https://zellij.dev/documentation/configuration
 keybinds {
   normal {
-    bind "Ctrl g" { SwitchToMode "Locked"; }
-    bind "Ctrl p" { SwitchToMode "Pane"; }
-    bind "Ctrl t" { SwitchToMode "Tab"; }
     bind "Ctrl n" { NewPane; }
-    bind "Ctrl w" { CloseFocus; }
-    bind "Alt h" { MoveFocus "Left"; }
-    bind "Alt j" { MoveFocus "Down"; }
-    bind "Alt k" { MoveFocus "Up"; }
-    bind "Alt l" { MoveFocus "Right"; }
   }
 }
 
@@ -17,4 +9,5 @@ default_shell "zsh"
 pane_frames true
 mouse_mode true
 copy_command "pbcopy"
-scrollback_editor "nvim"
+copy_on_select true
+show_startup_tips false
